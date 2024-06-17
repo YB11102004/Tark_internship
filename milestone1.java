@@ -1,24 +1,40 @@
 import java.util.*;
+
 class Trains {
-    String PNR;
+    String TrainNo;
     String source;
     String dest;
     int dist;
 
-    Trains(String PNR, String source, String dest, int dist) {
-        this.PNR = PNR;
+    Trains(String TrainNo, String source, String dest, int dist) {
+        this.TrainNo = TrainNo;
         this.source = source;
         this.dest = dest;
         this.dist = dist;
     }
 
     public void display() {
-        System.out.println(PNR + " " + source + " " + dest + " " + dist);
+        System.out.println(TrainNo + " " + source + " " + dest + " " + dist);
     }
 }
 
-class tark_hackathon {
-    public static void main(String args[]) {
+class Dates {
+    String date;
+    int[][] seatCounts;
+
+    Dates(String date, int[][] initialSeatCounts) {
+        this.date = date;
+        this.seatCounts = new int[initialSeatCounts.length][initialSeatCounts[0].length];
+        for (int i = 0; i < initialSeatCounts.length; i++) {
+            for (int j = 0; j < initialSeatCounts[i].length; j++) {
+                this.seatCounts[i][j] = initialSeatCounts[i][j];
+            }
+        }
+    }
+}
+
+public class TarkHackathon {
+    public static void main(String[] args) {
         int a = 2;
         Trains[] trains = {
             new Trains("17726", "Rajkot", "Mumbai", 750),
@@ -31,27 +47,19 @@ class tark_hackathon {
         };
 
         // Initialize seat counts
-        int[][] seatCounts = new int[seats.length][4];
+        int[][] initialSeatCounts = new int[seats.length][4];
         for (int i = 0; i < seats.length; i++) {
             String[] arr2 = seats[i].split("[ -]");
             for (int j = 1; j < arr2.length; j += 2) {
                 if (arr2[j].startsWith("S")) {
-                    seatCounts[i][0] += Integer.parseInt(arr2[j+1]);
+                    initialSeatCounts[i][0] += Integer.parseInt(arr2[j+1]);
                 } else if (arr2[j].startsWith("B")) {
-                    seatCounts[i][1] += Integer.parseInt(arr2[j+1]);
+                    initialSeatCounts[i][1] += Integer.parseInt(arr2[j+1]);
                 } else if (arr2[j].startsWith("A")) {
-                    seatCounts[i][2] += Integer.parseInt(arr2[j+1]);
+                    initialSeatCounts[i][2] += Integer.parseInt(arr2[j+1]);
                 } else if (arr2[j].startsWith("H")) {
-                    seatCounts[i][3] += Integer.parseInt(arr2[j+1]);
+                    initialSeatCounts[i][3] += Integer.parseInt(arr2[j+1]);
                 }
-            }
-        }
-
-        //copy of seatcount array
-        int[][] seatCounts1 = new int[seatCounts.length][seatCounts[0].length];
-        for (int i = 0; i < seatCounts.length; i++) {
-            for (int j = 0; j < seatCounts[i].length; j++) {
-                seatCounts1[i][j] = seatCounts[i][j];
             }
         }
 
@@ -66,7 +74,7 @@ class tark_hackathon {
         System.out.println("Enter train search request (type 'exit' to quit)");
 
         int tktnum = 100000001;
-        Set<String> date = new HashSet<>();
+        List<Dates> datesList = new ArrayList<>();
 
         while (true) {
             try {
@@ -76,29 +84,34 @@ class tark_hackathon {
                 }
 
                 String[] arr = d.split(" ");
+                if (arr.length != 5) {
+                    System.out.println("Invalid input format.");
+                    continue;
+                }
+
                 String src = arr[0];
                 String dest = arr[1];
+                String travelDate = arr[2];
                 String seatClass = arr[3];
-                String traveldate=arr[2];
-                int numPassengers = Integer.parseInt(arr[4]); // no of passengers
-                
-                if(!date.contains(traveldate))
-                {
-                    for (int i = 0; i < seatCounts1.length; i++) {
-                        for (int j = 0; j < seatCounts1[i].length; j++) {
-                            seatCounts[i][j] = seatCounts1[i][j];
-                        }
+                int numPassengers = Integer.parseInt(arr[4]);
+
+                Dates currentDate = null;
+                for (Dates dateInstance : datesList) {
+                    if (dateInstance.date.equals(travelDate)) {
+                        currentDate = dateInstance;
+                        break;
                     }
-                    date.add(traveldate);
+                }
+
+                if (currentDate == null) {
+                    currentDate = new Dates(travelDate, initialSeatCounts);
+                    datesList.add(currentDate);
                 }
 
                 boolean trainFound = false;
                 for (int i = 0; i < trains.length; i++) {
                     if (trains[i].source.equals(src) && trains[i].dest.equals(dest)) {
                         trainFound = true;
-                        int price = 0;
-                        System.out.println("The Train is found and the train number is: " + trains[i].PNR);
-
                         int seatClassIndex = -1;
                         switch (seatClass) {
                             case "SL":
@@ -118,7 +131,13 @@ class tark_hackathon {
                                 continue;
                         }
 
-                        if (seatCounts[i][seatClassIndex] >= numPassengers) {
+                        if (seatClassIndex == -1) {
+                            System.out.println("Invalid seat class.");
+                            continue;
+                        }
+
+                        if (currentDate.seatCounts[i][seatClassIndex] >= numPassengers) {
+                            int price = 0;
                             switch (seatClass) {
                                 case "SL":
                                     price = numPassengers * 1 * trains[i].dist;
@@ -134,7 +153,7 @@ class tark_hackathon {
                                     break;
                             }
 
-                            seatCounts[i][seatClassIndex] -= numPassengers;
+                            currentDate.seatCounts[i][seatClassIndex] -= numPassengers;
 
                             System.out.println("Ticket Number: " + tktnum);
                             System.out.println("Total Price: " + price);
@@ -148,36 +167,11 @@ class tark_hackathon {
                 if (!trainFound) {
                     System.out.println("Train not found.");
                 }
+            } catch (NumberFormatException e) {
+                System.out.println("Invalid number format: " + e.getMessage());
             } catch (Exception e) {
                 System.out.println("An unexpected error occurred: " + e.getMessage());
             }
         }
     }
 }
-
-
-
-// OUTPUT according to queries
-/* Welcome to Railways
-The number of available trains are: 2
-17726 Rajkot Mumbai 750
-37392 Ahmedabad Surat 300
-Enter train search request (type 'exit' to quit)
-Rajkot Mumbai 2023-03-15 SL 6
-The Train is found and the train number is: 17726
-Ticket Number: 100000001
-Total Price: 4500
-Rajkot Mumbai 2023-03-15 1A 24
-The Train is found and the train number is: 17726
-Ticket Number: 100000002
-Total Price: 72000
-Rajkot Mumbai 2023-03-15 1A 1
-The Train is found and the train number is: 17726
-Seats not available for booking.    
-Rajkot Mumbai 2023-03-16 1A 10
-The Train is found and the train number is: 17726
-Ticket Number: 100000003
-Total Price: 30000
-Rajkot Chennai 2023-03-16 1A 10
-Train not found.
-exit */
